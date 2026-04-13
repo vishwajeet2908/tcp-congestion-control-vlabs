@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TCP Congestion Control – Virtual Labs</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+<!-- ══════════════ HEADER ══════════════ -->
+<header class="site-header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <div class="logo-icon">VL</div>
+      <div class="logo-text">
+        <span class="logo-main">Virtual Labs</span>
+        <span class="logo-sub">an Initiative of MoE, Govt. of India</span>
+      </div>
+    </div>
+    <div class="lab-title">Computer Networks Lab &mdash; TCP Congestion Control</div>
+  </div>
+  <div class="header-right">
+    <button class="hdr-btn" id="rateBtn">⭐ Rate Me</button>
+    <button class="hdr-btn hdr-btn--outline" id="bugBtn">🐞 Report a Bug</button>
+  </div>
+</header>
+<div class="header-accent"></div>
+
+<!-- ══════════════ LAYOUT ══════════════ -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <nav class="sidebar" id="sidebar">
+    <ul class="nav-list">
+      <li class="nav-item active" data-section="aim">
+        <span class="nav-icon">🎯</span> Aim
+      </li>
+      <li class="nav-item" data-section="theory">
+        <span class="nav-icon">📖</span> Theory
+      </li>
+      <li class="nav-item" data-section="pretest">
+        <span class="nav-icon">📝</span> Pretest
+      </li>
+      <li class="nav-item" data-section="procedure">
+        <span class="nav-icon">📋</span> Procedure
+      </li>
+      <li class="nav-item" data-section="simulation">
+        <span class="nav-icon">⚙️</span> Simulation
+      </li>
+      <li class="nav-item" data-section="posttest">
+        <span class="nav-icon">✅</span> Posttest
+      </li>
+      <li class="nav-item" data-section="references">
+        <span class="nav-icon">📚</span> References
+      </li>
+      <li class="nav-item" data-section="contributors">
+        <span class="nav-icon">👥</span> Contributors
+      </li>
+      <li class="nav-item" data-section="feedback">
+        <span class="nav-icon">💬</span> Feedback
+      </li>
+    </ul>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="content" id="mainContent">
+
+    <!-- ── AIM ── -->
+    <section class="page active" id="aim">
+      <div class="page-header"><h1>Aim</h1></div>
+      <div class="page-body">
+        <h2>Objective</h2>
+        <p>
+          This experiment aims to provide a thorough understanding of
+          <strong>TCP Congestion Control</strong> mechanisms — the suite of
+          algorithms that prevent network congestion collapse while maintaining
+          efficient utilisation of available bandwidth.
+        </p>
+        <h2>Learning Outcomes</h2>
+        <p>Upon completion of this experiment, students will be able to:</p>
+        <ul>
+          <li>Describe the role of the <em>Congestion Window (cwnd)</em> and its dynamic adjustment.</li>
+          <li>Explain the <strong>Slow Start</strong> phase and its exponential growth behaviour.</li>
+          <li>Distinguish between Slow Start and <strong>Congestion Avoidance</strong> (linear growth).</li>
+          <li>Demonstrate <strong>Fast Retransmit</strong> triggered by three duplicate ACKs.</li>
+          <li>Trace the <strong>Fast Recovery</strong> procedure and contrast it with timeout-based recovery.</li>
+          <li>Interpret cwnd-versus-time graphs produced by TCP Reno.</li>
+        </ul>
+        <div class="info-box">
+          <strong>Lab Domain:</strong> Computer Networks &nbsp;|&nbsp;
+          <strong>Estimated Time:</strong> 45–60 minutes &nbsp;|&nbsp;
+          <strong>Level:</strong> Undergraduate / Graduate
+        </div>
+      </div>
+    </section>
+
+    <!-- ── THEORY ── -->
+    <section class="page" id="theory">
+      <div class="page-header"><h1>Theory</h1></div>
+      <div class="page-body">
+
+        <h2>1. Congestion and the Need for Control</h2>
+        <p>
+          Network congestion occurs when the offered load exceeds a link's capacity,
+          leading to packet queuing, delays, and ultimately packet loss. TCP detects
+          congestion implicitly through packet loss events (timeout or duplicate ACKs)
+          and adjusts its <em>sending rate</em> accordingly.
+        </p>
+
+        <h2>2. Congestion Window (cwnd)</h2>
+        <p>
+          The <strong>congestion window</strong> (<code>cwnd</code>) is a sender-side
+          limit on the number of unacknowledged bytes (segments) in flight. The
+          effective window is:
+        </p>
+        <div class="formula">
+          EffWin = min(cwnd, rwnd)
+        </div>
+        <p>where <code>rwnd</code> is the receiver-advertised window.</p>
+
+        <h2>3. Slow Start</h2>
+        <p>
+          TCP begins with <code>cwnd = 1 MSS</code>. For every ACK received,
+          <code>cwnd</code> increases by 1 MSS — effectively doubling each RTT
+          (exponential growth). This continues until <code>cwnd ≥ ssthresh</code>
+          or until packet loss is detected.
+        </p>
+        <ul>
+          <li>Start: <code>cwnd = 1</code></li>
+          <li>On each ACK: <code>cwnd += 1</code></li>
+          <li>Doubles per RTT until threshold</li>
+        </ul>
+
+        <h2>4. Congestion Avoidance</h2>
+        <p>
+          Once <code>cwnd ≥ ssthresh</code>, TCP switches to linear (additive)
+          growth — <strong>AIMD</strong> (Additive Increase, Multiplicative Decrease):
+        </p>
+        <div class="formula">
+          cwnd += MSS × (MSS / cwnd)  ≈ +1 MSS per RTT
+        </div>
+
+        <h2>5. Fast Retransmit</h2>
+        <p>
+          When the sender receives <strong>three duplicate ACKs</strong> for the same
+          segment, it infers that the segment was lost (but later segments arrived).
+          TCP retransmits the missing segment immediately — without waiting for a
+          timeout. This is far faster than a retransmission timeout (RTO).
+        </p>
+
+        <h2>6. Fast Recovery (TCP Reno)</h2>
+        <p>After Fast Retransmit, TCP Reno enters Fast Recovery:</p>
+        <ul>
+          <li><code>ssthresh = cwnd / 2</code></li>
+          <li><code>cwnd = ssthresh + 3</code> (inflate by 3 duplicate ACKs)</li>
+          <li>For each additional duplicate ACK: <code>cwnd += 1</code></li>
+          <li>On new ACK: <code>cwnd = ssthresh</code>, resume Congestion Avoidance</li>
+        </ul>
+
+        <!-- Diagram -->
+        <h2>7. State Transition Diagram</h2>
+        <div class="diagram-wrap">
+          <canvas id="theoryDiagram" width="680" height="220"></canvas>
+        </div>
+
+        <h2>8. TCP Reno vs TCP Tahoe</h2>
+        <table class="theory-table">
+          <thead>
+            <tr><th>Feature</th><th>TCP Tahoe</th><th>TCP Reno</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Timeout</td><td>cwnd → 1, Slow Start</td><td>cwnd → 1, Slow Start</td></tr>
+            <tr><td>3 Dup ACKs</td><td>cwnd → 1, Slow Start</td><td>Fast Recovery (cwnd = ssthresh)</td></tr>
+            <tr><td>Recovery speed</td><td>Slow</td><td>Faster</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── PRETEST ── -->
+    <section class="page" id="pretest">
+      <div class="page-header"><h1>Pretest</h1></div>
+      <div class="page-body">
+        <p class="quiz-intro">Answer the following questions to assess your prior knowledge before performing the experiment.</p>
+        <div id="pretestQuiz"></div>
+        <button class="btn-primary" id="submitPretest">Submit Answers</button>
+        <div class="quiz-result" id="pretestResult"></div>
+      </div>
+    </section>
+
+    <!-- ── PROCEDURE ── -->
+    <section class="page" id="procedure">
+      <div class="page-header"><h1>Procedure</h1></div>
+      <div class="page-body">
+        <p>Follow the steps below to perform the TCP Congestion Control simulation experiment:</p>
+        <ol class="procedure-list">
+          <li>
+            <strong>Navigate to the Simulation tab</strong> using the left sidebar.
+          </li>
+          <li>
+            <strong>Set the initial ssthresh value</strong> using the input field
+            provided. The default value is 16 segments. This is the threshold at which
+            TCP transitions from Slow Start to Congestion Avoidance.
+          </li>
+          <li>
+            <strong>Click "Start"</strong> to begin the simulation. Observe the
+            congestion window (<code>cwnd</code>) growing exponentially during the
+            Slow Start phase (doubling each RTT).
+          </li>
+          <li>
+            <strong>Observe the phase indicator</strong> on screen. When
+            <code>cwnd</code> reaches <code>ssthresh</code>, the phase changes to
+            <em>Congestion Avoidance</em>; growth slows to approximately +1 MSS/RTT.
+          </li>
+          <li>
+            <strong>Click "Introduce Packet Loss"</strong> at any point during the
+            simulation. This simulates detection of 3 duplicate ACKs. The simulation
+            will:
+            <ul>
+              <li>Set <code>ssthresh = cwnd / 2</code></li>
+              <li>Transition to Fast Recovery</li>
+              <li>Reduce <code>cwnd</code> to the new <code>ssthresh</code></li>
+              <li>Resume Congestion Avoidance</li>
+            </ul>
+          </li>
+          <li>
+            <strong>Observe the graph</strong>: note the sawtooth pattern typical of
+            TCP Reno — gradual increase followed by abrupt halving on congestion.
+          </li>
+          <li>
+            <strong>Use "Pause"</strong> at any time to freeze the simulation and
+            examine the current state values.
+          </li>
+          <li>
+            <strong>Click "Reset"</strong> to return to the initial state
+            (<code>cwnd = 1</code>).
+          </li>
+          <li>
+            <strong>Repeat with different ssthresh values</strong> (e.g., 8, 32) and
+            observe how the transition point changes.
+          </li>
+          <li>
+            <strong>Proceed to Posttest</strong> after completing at least two
+            simulation runs.
+          </li>
+        </ol>
+        <div class="info-box">
+          <strong>Note:</strong> Each step on the graph represents one Round-Trip Time (RTT).
+          The simulation is accelerated for demonstration purposes.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── SIMULATION ── -->
+    <section class="page" id="simulation">
+      <div class="page-header"><h1>Simulation</h1></div>
+      <div class="page-body sim-layout">
+
+        <!-- Controls panel -->
+        <div class="sim-controls">
+          <div class="ctrl-group">
+            <label for="ssthreshInput">Initial ssthresh (segments)</label>
+            <input type="number" id="ssthreshInput" value="16" min="4" max="64" />
+          </div>
+          <div class="ctrl-group">
+            <label for="speedInput">Simulation Speed</label>
+            <select id="speedInput">
+              <option value="800">Slow</option>
+              <option value="400" selected>Normal</option>
+              <option value="150">Fast</option>
+            </select>
+          </div>
+          <div class="sim-buttons">
+            <button class="btn-primary" id="btnStart">▶ Start</button>
+            <button class="btn-secondary" id="btnPause" disabled>⏸ Pause</button>
+            <button class="btn-secondary" id="btnReset">↺ Reset</button>
+            <button class="btn-danger" id="btnLoss" disabled>💥 Packet Loss</button>
+          </div>
+        </div>
+
+        <!-- Status cards -->
+        <div class="sim-status">
+          <div class="status-card">
+            <div class="status-label">Phase</div>
+            <div class="status-value" id="simPhase">—</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">cwnd</div>
+            <div class="status-value" id="simCwnd">1</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">ssthresh</div>
+            <div class="status-value" id="simSsthresh">16</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">RTT</div>
+            <div class="status-value" id="simRtt">0</div>
+          </div>
+          <div class="status-card">
+            <div class="status-label">Dup ACKs</div>
+            <div class="status-value" id="simDupAck">0</div>
+          </div>
+        </div>
+
+        <!-- Graph -->
+        <div class="sim-graph-wrap">
+          <div class="graph-title">Congestion Window (cwnd) vs Time (RTT)</div>
+          <canvas id="simCanvas"></canvas>
+          <div class="graph-legend">
+            <span class="leg-dot" style="background:#4fc3f7"></span> cwnd &nbsp;
+            <span class="leg-dot" style="background:#ff7043"></span> ssthresh &nbsp;
+            <span class="leg-dot" style="background:#66bb6a"></span> Slow Start &nbsp;
+            <span class="leg-dot" style="background:#ffa726"></span> Cong. Avoidance &nbsp;
+            <span class="leg-dot" style="background:#ef5350"></span> Fast Recovery
+          </div>
+        </div>
+
+        <!-- Event log -->
+        <div class="sim-log-wrap">
+          <div class="log-title">Event Log</div>
+          <div class="sim-log" id="simLog"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── POSTTEST ── -->
+    <section class="page" id="posttest">
+      <div class="page-header"><h1>Posttest</h1></div>
+      <div class="page-body">
+        <p class="quiz-intro">Answer the following conceptual questions after completing the simulation.</p>
+        <div id="posttestQuiz"></div>
+        <button class="btn-primary" id="submitPosttest">Submit Answers</button>
+        <div class="quiz-result" id="posttestResult"></div>
+      </div>
+    </section>
+
+    <!-- ── REFERENCES ── -->
+    <section class="page" id="references">
+      <div class="page-header"><h1>References</h1></div>
+      <div class="page-body">
+        <ol class="ref-list">
+          <li>
+            Forouzan, B. A. (2012). <em>Data Communications and Networking</em>
+            (5th ed.). McGraw-Hill Education.
+          </li>
+          <li>
+            Kurose, J. F., &amp; Ross, K. W. (2021). <em>Computer Networking:
+            A Top-Down Approach</em> (8th ed.). Pearson.
+          </li>
+          <li>
+            Allman, M., Paxson, V., &amp; Blanton, E. (2009). <em>TCP Congestion
+            Control</em>. RFC 5681. IETF.
+            <a href="https://www.rfc-editor.org/rfc/rfc5681" target="_blank">
+              https://www.rfc-editor.org/rfc/rfc5681
+            </a>
+          </li>
+          <li>
+            Stevens, W. R. (1994). <em>TCP/IP Illustrated, Volume 1: The Protocols</em>.
+            Addison-Wesley.
+          </li>
+          <li>
+            Virtual Labs — IIT Delhi.
+            <a href="https://vlab.co.in" target="_blank">https://vlab.co.in</a>
+          </li>
+          <li>
+            Jacobson, V. (1988). Congestion avoidance and control.
+            <em>ACM SIGCOMM Computer Communication Review</em>, 18(4), 314–329.
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ── CONTRIBUTORS ── -->
+    <section class="page" id="contributors">
+      <div class="page-header"><h1>Contributors</h1></div>
+      <div class="page-body">
+      <h2 style="color:#1a6cc4; border-bottom:none; font-size:1.1rem;">
+        Implementation of TCP Congestion Control
+      </h2>
+
+      <h3 style="margin:1.4rem 0 .6rem; font-size:.95rem; text-decoration:underline; color:#222;">
+        Lab Proposer / Subject Matter Experts
+      </h3>
+      <table class="theory-table">
+        <thead>
+        <tr>
+          <th>SNo.</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Institute</th>
+          <th>Position</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>1</td>
+          <td>Prof. Rakshak Sood</td>
+          <td><a href="mailto:rakshak.sood@vit.edu.in">rakshak.sood@vit.edu.in</a></td>
+          <td>Vidyalankar Institute of Technology</td>
+          <td>Professor</td>
+        </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin:1.8rem 0 .6rem; font-size:.95rem; text-decoration:underline; color:#222;">
+        Developed by
+      </h3>
+      <table class="theory-table">
+        <thead>
+        <tr>
+          <th>SNo.</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Institute</th>
+          <th>Position</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td>1</td>
+          <td>Vishwajeet Patil</td>
+          <td><a href="mailto:vishwajeet.patil@vit.edu.in">vishwajeet.patil@vit.edu.in</a></td>
+          <td>Vidyalankar Institute of Technology</td>
+          <td>Student</td>
+        </tr>
+        </tbody>
+      </table>
+
+      </div>
+    </section>
+
+    <!-- ── FEEDBACK ── -->
+    <section class="page" id="feedback">
+      <div class="page-header"><h1>Feedback</h1></div>
+      <div class="page-body">
+        <p>Your feedback helps us improve this experiment. Please share your experience.</p>
+        <div class="feedback-form">
+          <div class="form-group">
+            <label for="fbName">Name (optional)</label>
+            <input type="text" id="fbName" placeholder="Your name" />
+          </div>
+          <div class="form-group">
+            <label>Rating</label>
+            <div class="star-rating" id="starRating">
+              <span class="star" data-val="1">★</span>
+              <span class="star" data-val="2">★</span>
+              <span class="star" data-val="3">★</span>
+              <span class="star" data-val="4">★</span>
+              <span class="star" data-val="5">★</span>
+            </div>
+            <div class="rating-label" id="ratingLabel">Click to rate</div>
+          </div>
+          <div class="form-group">
+            <label for="fbExperience">How was your overall experience?</label>
+            <select id="fbExperience">
+              <option value="">-- Select --</option>
+              <option>Excellent</option>
+              <option>Good</option>
+              <option>Average</option>
+              <option>Poor</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="fbComments">Comments / Suggestions</label>
+            <textarea id="fbComments" rows="5" placeholder="Share your thoughts..."></textarea>
+          </div>
+          <button class="btn-primary" id="submitFeedback">Submit Feedback</button>
+          <div class="quiz-result" id="feedbackResult"></div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Modal for Rate / Bug -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <div class="modal-body" id="modalBody"></div>
+    <button class="btn-primary" id="modalClose">Close</button>
+  </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
